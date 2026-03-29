@@ -49,7 +49,7 @@ struct ReviewThankYouView: View {
 
     private var subtitle: String {
         if didRate {
-            return "Your review helps other players discover \(config.appName)!"
+            return "We'd love it if you left a written review too -- it helps other players find \(config.appName)!"
         } else {
             return "We appreciate your feedback and will use it to improve!"
         }

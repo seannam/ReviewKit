@@ -135,8 +135,8 @@ public class ReviewManager: ObservableObject {
         SKStoreReviewController.requestReview(in: scene)
     }
 
-    func openFeedbackEmail() {
-        let subject = config.feedbackEmailSubject
+    func openFeedbackEmail(subject customSubject: String? = nil) {
+        let subject = customSubject ?? config.feedbackEmailSubject
         let deviceInfo = buildDeviceInfo()
         let body = """
         Please share your feedback below:

@@ -30,7 +30,7 @@ public struct ReviewKitConfig {
         cardColor: Color = Color(uiColor: .secondarySystemBackground),
         textPrimaryColor: Color = .primary,
         textSecondaryColor: Color = .secondary,
-        positiveThreshold: Int = 4,
+        positiveThreshold: Int = 5,
         minSessionsBeforePrompt: Int = 5,
         minDaysSinceInstall: Int = 2,
         daysBetweenPrompts: Int = 7,

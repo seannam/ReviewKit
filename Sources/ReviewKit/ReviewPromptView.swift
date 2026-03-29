@@ -1,13 +1,13 @@
 import SwiftUI
 
 /// The main review prompt view that manages the full flow:
-/// star rating -> (positive: thank you) or (negative: feedback redirect -> thank you)
+/// Dynamic star rating with contextual button labels and messaging per star level.
+/// Only 5-star users are routed to the native App Store review.
 public struct ReviewPromptView: View {
     @Environment(\.dismiss) private var dismiss
 
     enum FlowState {
         case rating
-        case feedbackRedirect
         case thankYou(didRate: Bool)
     }
 
@@ -25,18 +25,6 @@ public struct ReviewPromptView: View {
             switch flowState {
             case .rating:
                 ratingView
-            case .feedbackRedirect:
-                FeedbackRedirectView(
-                    onSendFeedback: {
-                        ReviewManager.shared.openFeedbackEmail()
-                        ReviewManager.shared.completeFlow(.sentFeedback)
-                        withAnimation { flowState = .thankYou(didRate: false) }
-                    },
-                    onDismiss: {
-                        ReviewManager.shared.completeFlow(.dismissedAtFeedback)
-                        dismiss()
-                    }
-                )
             case .thankYou(let didRate):
                 ReviewThankYouView(didRate: didRate) {
                     dismiss()
@@ -56,9 +44,11 @@ public struct ReviewPromptView: View {
                 .foregroundColor(config.textPrimaryColor)
                 .multilineTextAlignment(.center)
 
-            Text("Tap a star to rate your experience")
+            Text(dynamicSubtitle)
                 .font(.subheadline)
                 .foregroundColor(config.textSecondaryColor)
+                .multilineTextAlignment(.center)
+                .animation(.easeInOut(duration: 0.2), value: selectedStars)
 
             // Star rating
             HStack(spacing: 12) {
@@ -78,17 +68,18 @@ public struct ReviewPromptView: View {
             }
             .padding(.vertical, 8)
 
-            // Submit button
+            // Dynamic action button
             Button {
                 handleSubmit()
             } label: {
-                Text("Submit")
+                Text(dynamicButtonLabel)
                     .font(.headline)
                     .foregroundColor(config.backgroundColor)
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background(selectedStars > 0 ? config.accentColor : config.textSecondaryColor.opacity(0.3))
                     .cornerRadius(14)
+                    .animation(.easeInOut(duration: 0.2), value: selectedStars)
             }
             .disabled(selectedStars == 0)
 
@@ -107,19 +98,68 @@ public struct ReviewPromptView: View {
         .padding(24)
     }
 
+    // MARK: - Dynamic Content
+
+    private var dynamicSubtitle: String {
+        switch selectedStars {
+        case 0:
+            return "Tap a star to rate your experience"
+        case 1:
+            return "We're sorry to hear that. Let us help."
+        case 2:
+            return "We'd love to know how we can do better."
+        case 3:
+            return "Thanks! What could we improve?"
+        case 4:
+            return "So close! What would make it 5 stars?"
+        default:
+            return "Awesome! We'd love a rating and review!"
+        }
+    }
+
+    private var dynamicButtonLabel: String {
+        switch selectedStars {
+        case 0:
+            return "Select a Rating"
+        case 1:
+            return "Contact Support"
+        case 2, 3:
+            return "Send Feedback"
+        case 4:
+            return "Tell Us More"
+        default:
+            return "Rate & Review"
+        }
+    }
+
     // MARK: - Actions
 
     private func handleSubmit() {
-        if selectedStars >= config.positiveThreshold {
+        switch selectedStars {
+        case 1:
+            ReviewManager.shared.openFeedbackEmail(
+                subject: "\(config.appName) - Support Request"
+            )
+            ReviewManager.shared.completeFlow(.sentFeedback)
+            withAnimation { flowState = .thankYou(didRate: false) }
+        case 2, 3:
+            ReviewManager.shared.openFeedbackEmail()
+            ReviewManager.shared.completeFlow(.sentFeedback)
+            withAnimation { flowState = .thankYou(didRate: false) }
+        case 4:
+            ReviewManager.shared.openFeedbackEmail(
+                subject: "\(config.appName) - How Can We Make It 5 Stars?"
+            )
+            ReviewManager.shared.completeFlow(.sentFeedback)
+            withAnimation { flowState = .thankYou(didRate: false) }
+        default:
+            // 5 stars
             ReviewManager.shared.recordRated()
             ReviewManager.shared.completeFlow(.rated(stars: selectedStars))
             withAnimation { flowState = .thankYou(didRate: true) }
-            // Trigger native review after a brief delay so the thank-you is visible first
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 ReviewManager.shared.requestNativeReview()
             }
-        } else {
-            withAnimation { flowState = .feedbackRedirect }
         }
     }
 }
