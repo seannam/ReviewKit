@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#endif
 
 // MARK: - Configuration
 
@@ -26,8 +28,20 @@ public struct ReviewKitConfig {
         feedbackEmail: String,
         feedbackEmailSubject: String? = nil,
         accentColor: Color = .yellow,
-        backgroundColor: Color = Color(uiColor: .systemBackground),
-        cardColor: Color = Color(uiColor: .secondarySystemBackground),
+        backgroundColor: Color = {
+            #if os(tvOS)
+            return Color.black
+            #else
+            return Color(uiColor: .systemBackground)
+            #endif
+        }(),
+        cardColor: Color = {
+            #if os(tvOS)
+            return Color(white: 0.15)
+            #else
+            return Color(uiColor: .secondarySystemBackground)
+            #endif
+        }(),
         textPrimaryColor: Color = .primary,
         textSecondaryColor: Color = .secondary,
         positiveThreshold: Int = 5,

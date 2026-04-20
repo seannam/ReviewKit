@@ -1,6 +1,8 @@
 import Foundation
 import StoreKit
+#if canImport(UIKit)
 import UIKit
+#endif
 
 /// Self-contained review prompt manager. Owns its persistence via UserDefaults
 /// and has zero dependencies on any app-specific code.
@@ -127,12 +129,14 @@ public class ReviewManager: ObservableObject {
     // MARK: - Actions
 
     func requestNativeReview() {
+        #if os(iOS)
         guard let scene = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
             .first(where: { $0.activationState == .foregroundActive })
         else { return }
 
         SKStoreReviewController.requestReview(in: scene)
+        #endif
     }
 
     func openFeedbackEmail(subject customSubject: String? = nil) {
@@ -153,9 +157,11 @@ public class ReviewManager: ObservableObject {
         let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let encodedBody = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
 
+        #if os(iOS)
         if let url = URL(string: "mailto:\(config.feedbackEmail)?subject=\(encodedSubject)&body=\(encodedBody)") {
             UIApplication.shared.open(url)
         }
+        #endif
     }
 
     /// For the Settings "Rate This App" button. Bypasses all eligibility checks and hooks.
@@ -178,12 +184,19 @@ public class ReviewManager: ObservableObject {
             return id + String(UnicodeScalar(UInt8(value)))
         }
 
-        let idiom = device.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        let idiom: String
+        switch device.userInterfaceIdiom {
+        case .pad: idiom = "iPad"
+        case .tv: idiom = "Apple TV"
+        case .carPlay: idiom = "CarPlay"
+        case .mac: idiom = "Mac"
+        default: idiom = "iPhone"
+        }
 
         return """
         App: \(config.appName) \(version) (\(build))
         Device: \(idiom) (\(identifier))
-        iOS: \(device.systemVersion)
+        OS: \(device.systemName) \(device.systemVersion)
         """
     }
 
